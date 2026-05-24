@@ -55,10 +55,12 @@ const CustomDrawerContent = ({ onClose, navigation }: Props) => {
             <MenuItem
               icon={<MaterialCommunityIcons name="archive-arrow-down-outline" size={24} color={Colors.success} />}
               label="Trừ bì"
+              onPress={() => navigateTo('SettingsTare')}
             />
             <MenuItem
               icon={<MaterialCommunityIcons name="form-select" size={24} color="#673ab7" />}
               label="Quy cách nhập"
+              onPress={() => navigateTo('SettingsInputFormat')}
             />
             <MenuItem
               icon={<MaterialCommunityIcons name="format-size" size={24} color="#ff9800" />}

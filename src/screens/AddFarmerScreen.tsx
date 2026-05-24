@@ -13,7 +13,7 @@ import {
   Keyboard,
   Dimensions
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
 import { addFarmer, updateVesselTotals } from '../database/db';
@@ -24,6 +24,7 @@ const { height } = Dimensions.get('window');
 const AddFarmerScreen = ({ navigation, route }: any) => {
   const { vesselId } = route.params;
   const { sizes } = useFontSettings();
+  const insets = useSafeAreaInsets();
 
   const [name, setName] = useState('');
   const [goodsName, setGoodsName] = useState('');
@@ -63,9 +64,9 @@ const AddFarmerScreen = ({ navigation, route }: any) => {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.mainContainer}>
-        <StatusBar barStyle="dark-content" backgroundColor="white" />
+        <StatusBar barStyle="dark-content" />
 
-        <SafeAreaView edges={['top']} style={styles.headerSafe}>
+        <View style={[styles.headerSafe, { paddingTop: insets.top }]}>
           <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeBtn}>
               <Ionicons name="close" size={28} color={Colors.text} />
@@ -79,7 +80,7 @@ const AddFarmerScreen = ({ navigation, route }: any) => {
               <Text style={[styles.saveBtnSmallText, { fontSize: sizes.base }]}>Lưu</Text>
             </TouchableOpacity>
           </View>
-        </SafeAreaView>
+        </View>
 
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
