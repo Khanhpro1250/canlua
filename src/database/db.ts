@@ -96,6 +96,32 @@ export const deleteFarmer = async (farmer: Farmer) => {
   await updateVesselTotals(farmer.vesselId);
 };
 
+export const updateFarmerName = async (id: number, name: string) => {
+  const db = await SQLite.openDatabaseAsync(dbName);
+  await db.runAsync('UPDATE farmers SET name = ? WHERE id = ?', [name, id]);
+};
+
+export const updateFarmerData = async (id: number, data: Partial<Farmer>) => {
+  const db = await SQLite.openDatabaseAsync(dbName);
+  const sets: string[] = [];
+  const params: any[] = [];
+
+  Object.entries(data).forEach(([key, value]) => {
+    if (key !== 'id') {
+      sets.push(`${key} = ?`);
+      params.push(value);
+    }
+  });
+
+  if (sets.length === 0) return;
+
+  params.push(id);
+  await db.runAsync(
+    `UPDATE farmers SET ${sets.join(', ')} WHERE id = ?`,
+    params
+  );
+};
+
 export const addFarmer = async (farmer: Omit<Farmer, 'id'>) => {
   const db = await SQLite.openDatabaseAsync(dbName);
   const result = await db.runAsync(

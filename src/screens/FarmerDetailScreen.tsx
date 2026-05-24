@@ -103,13 +103,16 @@ const FarmerDetailScreen = ({ navigation, route }: any) => {
                         <View style={styles.indexBadge}>
                             <Text style={styles.indexText}>{farmers.length - index}</Text>
                         </View>
-                        <View style={styles.nameTimeCol}>
+                        <View>
                             <Text style={[styles.farmerName, { fontSize: sizes.title }]} numberOfLines={1}>{item.name.toUpperCase()}</Text>
                             <Text style={[styles.timeText, { fontSize: sizes.subtitle }]}>23/05/2026 02:03</Text>
                         </View>
                     </View>
                     <View style={styles.headerRightActions}>
-                        <TouchableOpacity style={styles.maximizeBtn}>
+                        <TouchableOpacity
+                            style={styles.maximizeBtn}
+                            onPress={() => navigation.navigate('WeighingSession', { farmer: item })}
+                        >
                             <Feather name="maximize" size={16} color="#9a3412" />
                             <Text style={styles.maximizeBtnText}>MỞ</Text>
                         </TouchableOpacity>

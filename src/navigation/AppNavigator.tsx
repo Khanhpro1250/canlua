@@ -7,6 +7,7 @@ import FarmerDetailScreen from '../screens/FarmerDetailScreen';
 import SettingsFontSizeScreen from '../screens/SettingsFontSizeScreen';
 import SettingsInputFormatScreen from '../screens/SettingsInputFormatScreen';
 import SettingsTareScreen from '../screens/SettingsTareScreen';
+import WeighingSessionScreen from '../screens/WeighingSessionScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -20,6 +21,7 @@ const AppNavigator = () => {
       <Stack.Screen name="SettingsFontSize" component={SettingsFontSizeScreen} />
       <Stack.Screen name="SettingsInputFormat" component={SettingsInputFormatScreen} />
       <Stack.Screen name="SettingsTare" component={SettingsTareScreen} />
+      <Stack.Screen name="WeighingSession" component={WeighingSessionScreen} />
     </Stack.Navigator>
   );
 };
