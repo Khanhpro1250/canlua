@@ -1,17 +1,17 @@
 export default {
-  primary: '#004aad', // Professional Blue
-  primaryLight: '#3f73d4',
-  primaryDark: '#00267a',
-  secondary: '#e53935', // Modern Red
-  secondaryLight: '#ff6f60',
-  success: '#43a047', // Standard Green
-  warning: '#ffb300', // Amber/Yellow
-  background: '#f0f2f5', // Light grey background
+  primary: '#1d71d4', // App Blue
+  primaryDark: '#004aad',
+  secondary: '#ffb300', // Yellow/Gold
+  danger: '#e53935', // Red
+  success: '#43a047', // Green
+  background: '#f1f5f9', // Very light grey blue
   surface: '#ffffff',
   text: '#1a1c1e',
-  textSecondary: '#6c757d',
-  border: '#dee2e6',
+  textSecondary: '#64748b',
+  border: '#e2e8f0',
   white: '#ffffff',
   black: '#000000',
   drawerBackground: '#ffffff',
+  lightRed: '#fee2e2',
+  lightGreen: '#dcfce7',
 };

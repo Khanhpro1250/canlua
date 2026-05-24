@@ -7,9 +7,15 @@ const { width } = Dimensions.get('window');
 
 interface Props {
   onClose?: () => void;
+  navigation?: any;
 }
 
-const CustomDrawerContent = ({ onClose }: Props) => {
+const CustomDrawerContent = ({ onClose, navigation }: Props) => {
+  const navigateTo = (screenName: string) => {
+    if (onClose) onClose();
+    if (navigation) navigation.navigate(screenName);
+  };
+
   return (
     <View style={styles.container}>
       {/* Header Profile Section */}
@@ -44,7 +50,7 @@ const CustomDrawerContent = ({ onClose }: Props) => {
               icon={<MaterialCommunityIcons name="bluetooth-connect" size={24} color={Colors.primary} />}
               label="Kết nối Bluetooth"
               status="Đã ngắt"
-              statusColor={Colors.secondary}
+              statusColor={Colors.danger}
             />
             <MenuItem
               icon={<MaterialCommunityIcons name="archive-arrow-down-outline" size={24} color={Colors.success} />}
@@ -57,6 +63,7 @@ const CustomDrawerContent = ({ onClose }: Props) => {
             <MenuItem
               icon={<MaterialCommunityIcons name="format-size" size={24} color="#ff9800" />}
               label="Kích cỡ chữ"
+              onPress={() => navigateTo('SettingsFontSize')}
             />
             <MenuItem
               icon={<MaterialCommunityIcons name="text-to-speech" size={24} color="#00bcd4" />}
@@ -88,7 +95,7 @@ const CustomDrawerContent = ({ onClose }: Props) => {
             <MenuItem
               icon={<Ionicons name="information-circle-outline" size={24} color="#4caf50" />}
               label="Về phần mềm"
-              isLastItem
+              isLast
             />
           </View>
         </View>
@@ -101,166 +108,47 @@ const CustomDrawerContent = ({ onClose }: Props) => {
   );
 };
 
-const MenuItem = ({ icon, label, status, statusColor, isLast }: any) => (
-  <TouchableOpacity style={[styles.menuItem, isLast && { borderBottomWidth: 0 }]}>
+const MenuItem = ({ icon, label, status, statusColor, isLast, onPress }: any) => (
+  <TouchableOpacity
+    style={[styles.menuItem, isLast && { borderBottomWidth: 0 }]}
+    onPress={onPress}
+  >
     <View style={styles.menuItemLeft}>
       <View style={styles.iconWrapper}>{icon}</View>
       <Text style={styles.menuItemLabel}>{label}</Text>
     </View>
     <View style={styles.menuItemRight}>
       {status && <Text style={[styles.statusText, { color: statusColor }]}>{status}</Text>}
-      <Ionicons name="chevron-forward" size={18} color={Colors.grey} />
+      <Ionicons name="chevron-forward" size={18} color={Colors.border} />
     </View>
   </TouchableOpacity>
 );
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.drawerBackground,
-  },
-  header: {
-    backgroundColor: Colors.primary,
-    paddingTop: 60,
-    paddingBottom: 25,
-    paddingHorizontal: 20,
-    borderBottomRightRadius: 30,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  logoContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  exitButton: {
-    padding: 8,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 12,
-  },
-  headerInfo: {
-    marginTop: 20,
-  },
-  headerTitle: {
-    color: Colors.white,
-    fontSize: 24,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
-  },
-  versionContainer: {
-    marginTop: 4,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 2,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
-  },
-  versionText: {
-    color: Colors.white,
-    fontSize: 12,
-    fontWeight: '600',
-    opacity: 0.9,
-  },
-  scrollContent: {
-    paddingBottom: 20,
-  },
-  idSection: {
-    margin: 20,
-    padding: 15,
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ffebee',
-    elevation: 2,
-    shadowColor: Colors.secondary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  idLabel: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-  },
-  idValue: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: Colors.secondary,
-    marginTop: 5,
-  },
-  section: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: Colors.textSecondary,
-    marginBottom: 10,
-    marginLeft: 5,
-    letterSpacing: 0.5,
-  },
-  card: {
-    backgroundColor: Colors.white,
-    borderRadius: 18,
-    overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f5',
-  },
-  menuItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconWrapper: {
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  menuItemLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 12,
-    color: Colors.text,
-  },
-  menuItemRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusText: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginRight: 8,
-  },
-  footer: {
-    marginTop: 10,
-    alignItems: 'center',
-    paddingBottom: 20,
-  },
-  footerText: {
-    color: Colors.grey,
-    fontSize: 12,
-  },
+  container: { flex: 1, backgroundColor: '#f5f7fa' },
+  header: { backgroundColor: Colors.primary, paddingTop: 60, paddingBottom: 25, paddingHorizontal: 20, borderBottomRightRadius: 30 },
+  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  logoContainer: { width: 60, height: 60, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
+  exitButton: { padding: 8, backgroundColor: 'rgba(0,0,0,0.1)', borderRadius: 12 },
+  headerInfo: { marginTop: 20 },
+  headerTitle: { color: Colors.white, fontSize: 24, fontWeight: 'bold', letterSpacing: 0.5 },
+  versionContainer: { marginTop: 4, backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 10, paddingVertical: 2, borderRadius: 20, alignSelf: 'flex-start' },
+  versionText: { color: Colors.white, fontSize: 12, fontWeight: '600', opacity: 0.9 },
+  scrollContent: { paddingBottom: 20 },
+  idSection: { margin: 20, padding: 15, backgroundColor: '#fff', borderRadius: 15, alignItems: 'center', borderWidth: 1, borderColor: '#ffebee', elevation: 2 },
+  idLabel: { fontSize: 12, color: Colors.textSecondary, fontWeight: 'bold', letterSpacing: 1 },
+  idValue: { fontSize: 28, fontWeight: '900', color: Colors.danger, marginTop: 5 },
+  section: { paddingHorizontal: 20, marginBottom: 20 },
+  sectionTitle: { fontSize: 13, fontWeight: 'bold', color: Colors.textSecondary, marginBottom: 10, marginLeft: 5, letterSpacing: 0.5 },
+  card: { backgroundColor: Colors.white, borderRadius: 18, overflow: 'hidden', elevation: 2 },
+  menuItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#f5f5f5' },
+  menuItemLeft: { flexDirection: 'row', alignItems: 'center' },
+  iconWrapper: { width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
+  menuItemLabel: { fontSize: 16, fontWeight: '600', marginLeft: 12, color: Colors.text },
+  menuItemRight: { flexDirection: 'row', alignItems: 'center' },
+  statusText: { fontSize: 13, fontWeight: '600', marginRight: 8 },
+  footer: { marginTop: 10, alignItems: 'center', paddingBottom: 20 },
+  footerText: { color: Colors.textSecondary, fontSize: 12 },
 });
 
 export default CustomDrawerContent;
