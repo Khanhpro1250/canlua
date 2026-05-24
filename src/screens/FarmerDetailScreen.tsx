@@ -78,16 +78,28 @@ const FarmerDetailScreen = ({ navigation, route }: any) => {
         return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     };
 
-    const totalWeight = farmers.reduce((acc, curr) => acc + curr.weight, 0);
-    const totalCount = farmers.reduce((acc, curr) => acc + curr.count, 0);
-    const totalAmount = farmers.reduce((acc, curr) => acc + (curr.price * curr.weight), 0);
+    const calculateNetWeight = (item: Farmer) => {
+        // Use default value if impurity or count is null/undefined
+        const currentImpurity = item.impurity || 0;
+        const currentCount = item.count || 0;
+        const currentWeight = item.weight || 0;
+        const currentBagsPerKg = item.bagsPerKg || 8;
+
+        const tare = currentCount / currentBagsPerKg;
+        const net = currentWeight - tare - currentImpurity;
+        return net > 0 ? net : 0; // Prevent negative weight
+    };
+
+    const totalWeight = farmers.reduce((acc, curr) => acc + (curr.weight || 0), 0);
+    const totalCount = farmers.reduce((acc, curr) => acc + (curr.count || 0), 0);
+    const totalAmount = farmers.reduce((acc, curr) => acc + ((curr.price || 0) * (curr.weight || 0)), 0);
     const totalDeposit = farmers.reduce((acc, curr) => acc + (curr.deposit || 0), 0);
-    const totalPaid = farmers.reduce((acc, curr) => acc + curr.paid, 0);
-    const totalRemaining = totalAmount - totalPaid;
+    const totalPaid = farmers.reduce((acc, curr) => acc + (curr.paid || 0), 0);
+    const totalRemaining = totalAmount - totalDeposit - totalPaid;
 
     const sheetHeight = expandAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: [180, 420]
+        outputRange: [180, 520]
     });
 
     const renderFarmerItem = ({ item, index }: { item: Farmer, index: number }) => (
@@ -140,7 +152,7 @@ const FarmerDetailScreen = ({ navigation, route }: any) => {
                         </View>
                         <Text style={styles.statLabelSub}>(đã trừ bì)</Text>
                         <View style={styles.valueWrap}>
-                            <Text style={[styles.statValueRed, { fontSize: sizes.value }]} numberOfLines={1} adjustsFontSizeToFit>{formatNumber(item.weight)}</Text>
+                            <Text style={[styles.statValueRed, { fontSize: sizes.value }]} numberOfLines={1} adjustsFontSizeToFit>{formatNumber(item.weight || 0)}</Text>
                             <Text style={[styles.unitSmall, { fontSize: Math.min(sizes.subtitle, 14) }]}> KG</Text>
                         </View>
                     </View>
@@ -168,7 +180,7 @@ const FarmerDetailScreen = ({ navigation, route }: any) => {
                     </View>
                     <View style={styles.moneyRow}>
                         <Text style={[styles.moneyLabel, { fontSize: sizes.label }]}>Thành tiền:</Text>
-                        <Text style={[styles.moneyValueBold, { fontSize: sizes.base }]} numberOfLines={1} adjustsFontSizeToFit>{formatNumber(item.price * item.weight)} Đ</Text>
+                        <Text style={[styles.moneyValueBold, { fontSize: sizes.base }]} numberOfLines={1} adjustsFontSizeToFit>{formatNumber((item.price || 0) * (item.weight || 0))} Đ</Text>
                     </View>
                     <View style={styles.moneyRow}>
                         <Text style={[styles.moneyLabel, { fontSize: sizes.label, color: '#d97706' }]}>Đặt cọc:</Text>
@@ -186,7 +198,7 @@ const FarmerDetailScreen = ({ navigation, route }: any) => {
                         <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
                         <Text style={[styles.footerLabel, { fontSize: sizes.base }]}> CÒN LẠI:</Text>
                     </View>
-                    <Text style={[styles.footerValue, { fontSize: sizes.value }]} numberOfLines={1} adjustsFontSizeToFit>{formatNumber((item.price * item.weight) - item.paid)} Đ</Text>
+                    <Text style={[styles.footerValue, { fontSize: sizes.value }]} numberOfLines={1} adjustsFontSizeToFit>{formatNumber(((item.price || 0) * (item.weight || 0)) - (item.deposit || 0) - (item.paid || 0))} Đ</Text>
                 </View>
 
                 {activeMenuId === item.id && (
@@ -403,8 +415,8 @@ const styles = StyleSheet.create({
     sumBoxValueGreen: { fontWeight: '900', color: '#43a047', width: '100%', textAlign: 'center' },
     unitSmallSum: { fontSize: 12, fontWeight: '800' },
     expandedContent: { marginTop: 5 },
-    expandedRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 },
-    expandedLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 10 },
+    expandedRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, flexWrap: 'wrap' },
+    expandedLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 10, minWidth: 150 },
     expandedLabel: { fontWeight: '700', color: '#1a1c1e' },
     expandedValue: { fontWeight: '800', color: '#1a1c1e', flexShrink: 1 },
     expandedValueBlue: { fontWeight: '900', color: '#004aad', flexShrink: 1 },

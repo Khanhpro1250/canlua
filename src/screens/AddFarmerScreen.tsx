@@ -18,12 +18,14 @@ import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
 import { addFarmer, updateVesselTotals } from '../database/db';
 import { useFontSettings } from '../context/FontSizeContext';
+import { useTareConfig } from '../context/TareConfigContext';
 
 const { height } = Dimensions.get('window');
 
 const AddFarmerScreen = ({ navigation, route }: any) => {
   const { vesselId } = route.params;
   const { sizes } = useFontSettings();
+  const { isTareByTime, bagsPerKg, kgPerBag } = useTareConfig();
   const insets = useSafeAreaInsets();
 
   const [name, setName] = useState('');
@@ -52,6 +54,10 @@ const AddFarmerScreen = ({ navigation, route }: any) => {
         count: 0,
         deposit: 0,
         paid: 0,
+        impurity: 0,
+        tareMode: isTareByTime ? 1 : 0,
+        bagsPerKg: bagsPerKg,
+        kgPerBag: kgPerBag || 0,
         dateStr: '23/05'
       });
 

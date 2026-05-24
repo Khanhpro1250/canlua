@@ -21,6 +21,10 @@ export interface Farmer {
   count: number;
   deposit: number;
   paid: number;
+  impurity: number;
+  tareMode: number;
+  bagsPerKg: number;
+  kgPerBag: number;
   dateStr: string;
 }
 
@@ -47,10 +51,38 @@ export const initDatabase = async () => {
       count INTEGER DEFAULT 0,
       deposit REAL DEFAULT 0,
       paid REAL DEFAULT 0,
+      impurity REAL DEFAULT 0,
+      tareMode INTEGER DEFAULT 0, -- 0: bags per kg, 1: kg per bag
+      bagsPerKg INTEGER DEFAULT 8,
+      kgPerBag REAL DEFAULT 0,
       dateStr TEXT,
       FOREIGN KEY (vesselId) REFERENCES vessels (id) ON DELETE CASCADE
     );
+    CREATE TABLE IF NOT EXISTS weighing_records (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      farmerId INTEGER,
+      weight REAL NOT NULL,
+      recordIndex INTEGER NOT NULL,
+      FOREIGN KEY (farmerId) REFERENCES farmers (id) ON DELETE CASCADE
+    );
   `);
+
+  // Migration: Add columns if they don't exist
+  try {
+    await db.execAsync("ALTER TABLE farmers ADD COLUMN impurity REAL DEFAULT 0;");
+  } catch (e) { /* Column already exists */ }
+
+  try {
+    await db.execAsync("ALTER TABLE farmers ADD COLUMN bagsPerKg INTEGER DEFAULT 8;");
+  } catch (e) { /* Column already exists */ }
+
+  try {
+    await db.execAsync("ALTER TABLE farmers ADD COLUMN tareMode INTEGER DEFAULT 0;");
+  } catch (e) { /* Column already exists */ }
+
+  try {
+    await db.execAsync("ALTER TABLE farmers ADD COLUMN kgPerBag REAL DEFAULT 0;");
+  } catch (e) { /* Column already exists */ }
 
   return db;
 };
@@ -125,8 +157,8 @@ export const updateFarmerData = async (id: number, data: Partial<Farmer>) => {
 export const addFarmer = async (farmer: Omit<Farmer, 'id'>) => {
   const db = await SQLite.openDatabaseAsync(dbName);
   const result = await db.runAsync(
-    'INSERT INTO farmers (vesselId, name, goodsName, price, weight, count, deposit, paid, dateStr) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [farmer.vesselId, farmer.name, farmer.goodsName, farmer.price, farmer.weight, farmer.count, farmer.deposit, farmer.paid, farmer.dateStr]
+    'INSERT INTO farmers (vesselId, name, goodsName, price, weight, count, deposit, paid, impurity, bagsPerKg, dateStr) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [farmer.vesselId, farmer.name, farmer.goodsName, farmer.price, farmer.weight, farmer.count, farmer.deposit, farmer.paid, farmer.impurity || 0, farmer.bagsPerKg || 8, farmer.dateStr]
   );
 
   // Update vessel totals
@@ -147,5 +179,98 @@ export const updateVesselTotals = async (vesselId: number) => {
       'UPDATE vessels SET weight = ?, count = ? WHERE id = ?',
       [totals.totalWeight || 0, totals.totalCount || 0, vesselId]
     );
+  }
+};
+
+// Weighing Records
+export interface WeighingRecord {
+  id: number;
+  farmerId: number;
+  weight: number;
+  recordIndex: number;
+}
+
+export const getWeighingRecords = async (farmerId: number) => {
+  const db = await SQLite.openDatabaseAsync(dbName);
+  return await db.getAllAsync<WeighingRecord>(
+    'SELECT * FROM weighing_records WHERE farmerId = ? ORDER BY recordIndex ASC',
+    [farmerId]
+  );
+};
+
+export const saveWeighingRecord = async (farmerId: number, weight: number, index: number) => {
+  const db = await SQLite.openDatabaseAsync(dbName);
+
+  // Upsert logic: check if record at index exists
+  const existing = await db.getFirstAsync<WeighingRecord>(
+    'SELECT * FROM weighing_records WHERE farmerId = ? AND recordIndex = ?',
+    [farmerId, index]
+  );
+
+  if (existing) {
+    await db.runAsync(
+      'UPDATE weighing_records SET weight = ? WHERE id = ?',
+      [weight, existing.id]
+    );
+  } else {
+    await db.runAsync(
+      'INSERT INTO weighing_records (farmerId, weight, recordIndex) VALUES (?, ?, ?)',
+      [farmerId, weight, index]
+    );
+  }
+
+  // Update farmer totals
+  await updateFarmerTotals(farmerId);
+};
+
+export const deleteWeighingRecord = async (farmerId: number, index: number) => {
+  const db = await SQLite.openDatabaseAsync(dbName);
+  await db.runAsync(
+    'DELETE FROM weighing_records WHERE farmerId = ? AND recordIndex = ?',
+    [farmerId, index]
+  );
+  await updateFarmerTotals(farmerId);
+};
+
+export const updateFarmerTotals = async (farmerId: number) => {
+  const db = await SQLite.openDatabaseAsync(dbName);
+
+  // 1. Get Sum and Count of individual records
+  const data = await db.getFirstAsync<{totalWeight: number, totalCount: number}>(
+    'SELECT SUM(weight) as totalWeight, COUNT(*) as totalCount FROM weighing_records WHERE farmerId = ?',
+    [farmerId]
+  );
+
+  // 2. Get Farmer info to calculate Net Weight properly for persistence
+  const farmer = await db.getFirstAsync<Farmer>(
+    'SELECT impurity, bagsPerKg, vesselId FROM farmers WHERE id = ?',
+    [farmerId]
+  );
+
+  if (data && farmer) {
+    const grossWeight = data.totalWeight || 0;
+    const count = data.totalCount || 0;
+    const impurity = farmer.impurity || 0;
+    const bagsPerKg = farmer.bagsPerKg || 8;
+    const kgPerBag = farmer.kgPerBag || 0;
+    const tareMode = farmer.tareMode || 0;
+
+    let tare = 0;
+    if (tareMode === 0) {
+      tare = bagsPerKg > 0 ? count / bagsPerKg : 0;
+    } else {
+      tare = count * kgPerBag;
+    }
+
+    const netWeight = Math.max(0, grossWeight - tare - impurity);
+
+    // IMPORTANT: We store the NET weight in the farmers table so the list view shows the right number
+    await db.runAsync(
+      'UPDATE farmers SET weight = ?, count = ? WHERE id = ?',
+      [netWeight, count, farmerId]
+    );
+
+    // Update the vessel overall totals
+    await updateVesselTotals(farmer.vesselId);
   }
 };
