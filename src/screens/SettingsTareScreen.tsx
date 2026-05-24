@@ -14,18 +14,27 @@ import {
   Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
 import { useTareConfig } from '../context/TareConfigContext';
 
 const SettingsTareScreen = ({ navigation }: any) => {
-  const { isTareByTime, bagsPerKg, setIsTareByTime, setBagsPerKg } = useTareConfig();
+  const { isTareByTime, bagsPerKg, kgPerBag, setIsTareByTime, setBagsPerKg, setKgPerBag } = useTareConfig();
+
   const [tempBags, setTempBags] = useState(bagsPerKg.toString());
+  const [tempKgPerBag, setTempKgPerBag] = useState(kgPerBag.toString());
 
   const onSave = () => {
-    const numericValue = parseInt(tempBags);
-    if (!isNaN(numericValue) && numericValue > 0) {
-      setBagsPerKg(numericValue);
+    if (isTareByTime) {
+      const val = parseFloat(tempKgPerBag.replace(',', '.'));
+      if (!isNaN(val) && val >= 0) {
+        setKgPerBag(val);
+      }
+    } else {
+      const val = parseInt(tempBags);
+      if (!isNaN(val) && val > 0) {
+        setBagsPerKg(val);
+      }
     }
     navigation.goBack();
   };
@@ -35,7 +44,7 @@ const SettingsTareScreen = ({ navigation }: any) => {
       <View style={styles.mainContainer}>
         <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-        {/* Header consistent with App */}
+        {/* Header Area */}
         <View style={styles.headerArea}>
           <SafeAreaView edges={['top']}>
             <View style={styles.header}>
@@ -65,66 +74,83 @@ const SettingsTareScreen = ({ navigation }: any) => {
               <View style={styles.card}>
                 <View style={styles.cardHeader}>
                   <View style={styles.cardTitleRow}>
-                    <MaterialCommunityIcons name="scale-off" size={24} color={Colors.primary} />
+                    <MaterialCommunityIcons
+                      name={isTareByTime ? "scale-balance" : "scale-off"}
+                      size={24}
+                      color={Colors.primary}
+                    />
                     <Text style={styles.cardTitle}>Trừ bì trên lần cân</Text>
                   </View>
                   <Switch
                     trackColor={{ false: '#d1d5db', true: Colors.success }}
                     thumbColor={isTareByTime ? '#fff' : '#f4f3f4'}
-                    ios_backgroundColor="#d1d5db"
                     onValueChange={setIsTareByTime}
                     value={isTareByTime}
                   />
                 </View>
                 <Text style={styles.cardDesc}>
-                  Nếu bạn muốn trừ bì trực tiếp trên mỗi lần cân (ví dụ: trừ 0.5kg/bao) hãy bật sáng lên.
+                  {isTareByTime
+                    ? "Đang bật: Khối lượng trừ bì sẽ được tính trực tiếp trên mỗi lần cân."
+                    : "Đang tắt: Khối lượng trừ bì sẽ được tính dựa trên tổng số bao đã cân."}
                 </Text>
-                <View style={styles.infoBadge}>
-                   <Text style={styles.infoBadgeText}>
-                     {isTareByTime ? "Đang bật: Trừ bì theo lần" : "Đang tắt: Trừ bì theo số bao/1kg"}
-                   </Text>
-                </View>
               </View>
             </View>
 
-            {/* Section 2: Bags Per KG (Active only if Tare Mode is OFF) */}
-            <View style={[styles.section, isTareByTime && styles.disabledSection]}>
+            {/* Section 2: Conditional Input Based on Tare Mode */}
+            <View style={styles.section}>
               <View style={styles.card}>
                 <View style={styles.cardHeader}>
                   <View style={styles.cardTitleRow}>
-                    <MaterialCommunityIcons name="layers-outline" size={24} color={Colors.primary} />
-                    <Text style={styles.cardTitle}>Số bao trên 1kg</Text>
+                    <MaterialCommunityIcons
+                      name={isTareByTime ? "weight-kilogram" : "layers-outline"}
+                      size={24}
+                      color={Colors.primary}
+                    />
+                    <Text style={styles.cardTitle}>
+                      {isTareByTime ? "Trừ bì trên 1 lần cân KG/bao" : "Số bao trên 1kg"}
+                    </Text>
                   </View>
                 </View>
 
                 <View style={styles.inputWrapper}>
                   <TextInput
                     style={styles.input}
-                    value={tempBags}
-                    onChangeText={setTempBags}
-                    keyboardType="numeric"
-                    placeholder="8"
-                    editable={!isTareByTime}
+                    value={isTareByTime ? tempKgPerBag : tempBags}
+                    onChangeText={isTareByTime ? setTempKgPerBag : setTempBags}
+                    keyboardType={isTareByTime ? "decimal-pad" : "numeric"}
+                    placeholder={isTareByTime ? "0.5" : "8"}
                   />
-                  <Text style={styles.inputUnit}>BAO / 1KG</Text>
+                  <Text style={styles.inputUnit}>
+                    {isTareByTime ? "KG / BAO" : "BAO / 1KG"}
+                  </Text>
                 </View>
 
                 <View style={styles.noteContainer}>
                   <Text style={styles.noteTitle}>(*) Chú ý:</Text>
                   <View style={styles.noteItem}>
                     <View style={styles.dot} />
-                    <Text style={styles.noteText}>Số bao tương ứng với số lần cân (1 lần cân = 1 bao).</Text>
-                  </View>
-                  <View style={styles.noteItem}>
-                    <View style={styles.dot} />
-                    <Text style={styles.noteText}>Khối lượng trừ bì = (Số bao đã cân / Số bao trên 1 kg).</Text>
-                  </View>
-                  <View style={styles.formulaBox}>
-                    <Text style={styles.formulaText}>
-                      VD: Cân 100 bao, cài 8 bao/1kg {'\n'}
-                      {`=>`} Trừ bì: 100 / 8 = <Text style={styles.highlightText}>12.5 kg</Text>
+                    <Text style={styles.noteText}>
+                      {isTareByTime
+                        ? "Khối lượng trừ bì sẽ tính trên 1 lần cân (ví dụ: mỗi bao lúa trừ 0.5kg)."
+                        : "Số bao tương ứng với số lần cân (1 lần cân = 1 bao)."}
                     </Text>
                   </View>
+
+                  {isTareByTime ? (
+                    <View style={styles.formulaBox}>
+                      <Text style={styles.formulaText}>
+                        VD: Cân 100 lần, cài trừ 0.5 kg/bao {'\n'}
+                        {`=>`} Tổng trừ: 100 x 0.5 = <Text style={styles.highlightText}>50.0 kg</Text>
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={styles.formulaBox}>
+                      <Text style={styles.formulaText}>
+                        VD: Cân 100 bao, cài 8 bao/1kg {'\n'}
+                        {`=>`} Tổng trừ: 100 / 8 = <Text style={styles.highlightText}>12.5 kg</Text>
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </View>
             </View>
@@ -157,17 +183,14 @@ const styles = StyleSheet.create({
   saveBtnSmallText: { color: 'black', fontWeight: '900', marginLeft: 4, fontSize: 14 },
   scrollContent: { padding: 20, paddingBottom: 50 },
   section: { marginBottom: 20 },
-  disabledSection: { opacity: 0.5 },
   card: { backgroundColor: 'white', borderRadius: 24, padding: 20, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, borderWidth: 1, borderColor: '#e2e8f0' },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   cardTitleRow: { flexDirection: 'row', alignItems: 'center' },
   cardTitle: { fontSize: 18, fontWeight: '900', color: Colors.text, marginLeft: 10 },
-  cardDesc: { fontSize: 15, color: Colors.textSecondary, lineHeight: 22, fontWeight: '600', marginBottom: 15 },
-  infoBadge: { backgroundColor: '#f0f7ff', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, alignSelf: 'flex-start' },
-  infoBadgeText: { color: Colors.primary, fontWeight: '800', fontSize: 13 },
+  cardDesc: { fontSize: 14, color: Colors.textSecondary, lineHeight: 20, fontWeight: '600', marginBottom: 10 },
   inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8fafc', borderRadius: 16, borderWidth: 2, borderColor: '#e2e8f0', paddingHorizontal: 20, height: 70, marginVertical: 15 },
   input: { flex: 1, fontSize: 32, fontWeight: '900', color: Colors.danger, textAlign: 'right', marginRight: 15 },
-  inputUnit: { fontSize: 18, fontWeight: '900', color: Colors.text },
+  inputUnit: { fontSize: 16, fontWeight: '900', color: Colors.text },
   noteContainer: { marginTop: 10 },
   noteTitle: { fontSize: 16, fontWeight: '900', color: Colors.danger, marginBottom: 10 },
   noteItem: { flexDirection: 'row', marginBottom: 8, paddingRight: 10 },

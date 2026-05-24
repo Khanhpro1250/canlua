@@ -94,17 +94,22 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
   };
 
   const handleEditLocalTare = () => {
-    setTempTareValue(sessionBagsPerKg.toString());
+    const currentVal = sessionTareMode === 0 ? sessionBagsPerKg : sessionKgPerBag;
+    setTempTareValue(currentVal.toString());
     setIsTareModalVisible(true);
   };
 
   const handleSaveLocalTare = () => {
-    const num = parseInt(tempTareValue);
-    if (!isNaN(num) && num > 0) {
-      setSessionBagsPerKg(num);
+    const val = parseFloat(tempTareValue.replace(',', '.'));
+    if (!isNaN(val) && val >= 0) {
+      if (sessionTareMode === 0) {
+        setSessionBagsPerKg(val);
+      } else {
+        setSessionKgPerBag(val);
+      }
       setIsTareModalVisible(false);
     } else {
-      Alert.alert("Lỗi", "Vui lòng nhập số bao hợp lệ");
+      Alert.alert("Lỗi", "Vui lòng nhập giá trị hợp lệ");
     }
   };
 
@@ -418,9 +423,13 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
                 <TouchableOpacity onPress={handleEditLocalTare} style={styles.gearBtn}>
                   <Ionicons name="settings-outline" size={20} color={Colors.danger} />
                 </TouchableOpacity>
-                <Text style={[styles.valueTextBold, { fontSize: sizes.value }]}>{tareTotal % 1 === 0 ? tareTotal : tareTotal.toFixed(1)} KG</Text>
+                <Text style={[styles.valueTextBold, { fontSize: sizes.value }]}>
+                    {tareTotal % 1 === 0 ? tareTotal : tareTotal.toFixed(1)} KG
+                </Text>
               </View>
-              <Text style={[styles.guideNoteRed, { fontSize: sizes.subtitle }]}>(*) Trừ bì đang cài: {sessionBagsPerKg} bao / 1kg</Text>
+              <Text style={[styles.guideNoteRed, { fontSize: sizes.subtitle }]}>
+                (*) Trừ bì: {sessionTareMode === 0 ? `${sessionBagsPerKg} bao / 1kg` : `${sessionKgPerBag} kg / bao`}
+              </Text>
             </View>
 
             <View style={styles.inputGroup}>
@@ -603,21 +612,24 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
                 </View>
 
                 <View style={styles.modalBody}>
-                  <Text style={styles.modalSubtitleText}>Thiết lập số bao tương ứng trên 1kg</Text>
+                  <Text style={styles.modalSubtitleText}>
+                    {sessionTareMode === 0 ? "Thiết lập số bao tương ứng trên 1kg" : "Thiết lập số ký trừ trực tiếp trên mỗi bao"}
+                  </Text>
                   <View style={styles.mainInputContainer}>
                     <TextInput
                       style={styles.bigNumberInput}
                       value={tempTareValue}
-                      onChangeText={(t) => setTempTareValue(t.replace(/[^0-9]/g, ''))}
-                      keyboardType="number-pad"
+                      onChangeText={(t) => setTempTareValue(t.replace(/[^0-9.,]/g, '').replace(',', '.'))}
+                      keyboardType="decimal-pad"
                       autoFocus={true}
-                      maxLength={2}
                     />
-                    <Text style={styles.suffixText}>BAO / 1KG</Text>
+                    <Text style={styles.suffixText}>{sessionTareMode === 0 ? "BAO / 1KG" : "KG / BAO"}</Text>
                   </View>
                   <View style={styles.infoAlertBox}>
                     <Ionicons name="information-circle" size={20} color="#0369a1" />
-                    <Text style={styles.infoAlertText}>1 lần cân = 1 bao. Thay đổi này chỉ cho nông dân này.</Text>
+                    <Text style={styles.infoAlertText}>
+                        {sessionTareMode === 0 ? "1 lần cân = 1 bao. Thay đổi này chỉ cho nông dân này." : "Khối lượng trừ bì tính trên 1 lần cân."}
+                    </Text>
                   </View>
                 </View>
 

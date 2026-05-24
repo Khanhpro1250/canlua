@@ -157,8 +157,22 @@ export const updateFarmerData = async (id: number, data: Partial<Farmer>) => {
 export const addFarmer = async (farmer: Omit<Farmer, 'id'>) => {
   const db = await SQLite.openDatabaseAsync(dbName);
   const result = await db.runAsync(
-    'INSERT INTO farmers (vesselId, name, goodsName, price, weight, count, deposit, paid, impurity, bagsPerKg, dateStr) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [farmer.vesselId, farmer.name, farmer.goodsName, farmer.price, farmer.weight, farmer.count, farmer.deposit, farmer.paid, farmer.impurity || 0, farmer.bagsPerKg || 8, farmer.dateStr]
+    'INSERT INTO farmers (vesselId, name, goodsName, price, weight, count, deposit, paid, impurity, tareMode, bagsPerKg, kgPerBag, dateStr) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [
+      farmer.vesselId,
+      farmer.name,
+      farmer.goodsName,
+      farmer.price,
+      farmer.weight,
+      farmer.count,
+      farmer.deposit,
+      farmer.paid,
+      farmer.impurity || 0,
+      farmer.tareMode || 0,
+      farmer.bagsPerKg || 8,
+      farmer.kgPerBag || 0,
+      farmer.dateStr
+    ]
   );
 
   // Update vessel totals
