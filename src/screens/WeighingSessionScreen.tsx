@@ -406,14 +406,15 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
 
                     <View style={styles.formContainer}>
                         <View style={styles.inputGroup}>
-                            <Text style={[styles.fieldLabel, { fontSize: sizes.label }]}>Tên nông dân</Text>
+                            <Text style={[styles.fieldLabel, { fontSize: sizes.label + 2 }]}>Tên nông dân</Text>
                             <View style={[styles.inputBox, paidInFull && styles.bgLocked]}>
+                                <Feather name="user" size={20} color={Colors.textSecondary} />
                                 <TextInput
                                     style={[styles.inputText, { fontSize: sizes.base + 2, color: colors.primaryText }]}
                                     value={farmerName}
                                     onChangeText={handleFarmerNameChange}
                                     onBlur={handleFarmerNameBlur}
-                                    placeholderTextColor="#94a3b8"
+                                    placeholderTextColor="#adb5bd"
                                     editable={!paidInFull}
                                 />
                             </View>
@@ -421,10 +422,11 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
 
                         <View style={styles.inputGroup}>
                             <View style={[styles.inputBox, styles.inputBoxSuccess]}>
+                                <Feather name="package" size={20} color={Colors.textSecondary} />
                                 <TextInput
                                     style={[styles.inputText, styles.italic, { fontSize: sizes.base + 2, color: colors.primaryText }]}
                                     placeholder="Nhập tên giống lúa..."
-                                    placeholderTextColor="#94a3b8"
+                                    placeholderTextColor="#adb5bd"
                                     value={goodsName}
                                     onChangeText={setGoodsName}
                                     editable={true}
@@ -456,7 +458,8 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
                                 <Text style={[styles.sectionTitle, { fontSize: sizes.title }]}>Số lần cân (Bao)</Text>
                             </View>
                             <View style={[styles.inputBoxWithIcon, styles.bgLocked]}>
-                                <Text style={[styles.inputText, styles.textCenter, { fontSize: sizes.value, color: colors.primaryText, height: undefined, paddingLeft: 0, paddingRight: 0 }]}>
+                                <MaterialCommunityIcons name="archive-outline" size={20} color={Colors.textSecondary} />
+                                <Text style={[styles.inputText, styles.textCenter, { fontSize: sizes.value, color: colors.primaryText, height: undefined, marginLeft: 0 }]}>
                                     {bagCount}
                                 </Text>
                                 <MaterialCommunityIcons name="lock-outline" size={20} color={Colors.textSecondary} />
@@ -483,6 +486,7 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
                         <View style={styles.inputGroup}>
                             <Text style={[styles.fieldHeading, { fontSize: sizes.label + 2 }]}>Trừ tạp chất (-)</Text>
                             <View style={[styles.inputBox, paidInFull && styles.bgLocked]}>
+                                <MaterialCommunityIcons name="filter-variant" size={22} color={Colors.textSecondary} />
                                 <TextInput
                                     style={[styles.inputText, styles.textRight, { fontSize: sizes.value, color: colors.primaryText }]}
                                     value={impurity.replace('.', ',')}
@@ -520,6 +524,7 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
                         <View style={styles.inputGroup}>
                             <Text style={[styles.fieldHeading, { fontSize: sizes.label + 2 }]}>Đơn giá thỏa thuận</Text>
                             <View style={[styles.inputBox, paidInFull && styles.bgLocked]}>
+                                <MaterialCommunityIcons name="currency-usd" size={24} color={Colors.textSecondary} />
                                 <TextInput
                                     style={[styles.inputText, styles.textRight, { fontSize: sizes.value, color: colors.primaryText }]}
                                     value={formatCurrency(price)}
@@ -547,6 +552,7 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
                         <View style={styles.inputGroup}>
                             <Text style={[styles.fieldHeading, { fontSize: sizes.label + 2 }]}>Tiền đặt cọc (-)</Text>
                             <View style={[styles.inputBox, paidInFull && styles.bgLocked]}>
+                                <MaterialCommunityIcons name="cash-minus" size={24} color={Colors.textSecondary} />
                                 <TextInput
                                     style={[styles.inputText, styles.textRight, { fontSize: sizes.value, color: colors.primaryText }]}
                                     value={formatCurrency(deposit)}
@@ -562,6 +568,7 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
                         <View style={styles.inputGroup}>
                             <Text style={[styles.fieldHeading, { fontSize: sizes.label + 2 }]}>Tiền đã trả (-)</Text>
                             <View style={[styles.inputBox, paidInFull && styles.bgLocked]}>
+                                <MaterialCommunityIcons name="cash-check" size={24} color={Colors.textSecondary} />
                                 <TextInput
                                     style={[styles.inputText, styles.textRight, { fontSize: sizes.value, color: colors.primaryText }]}
                                     value={formatCurrency(paid)}
@@ -786,13 +793,13 @@ const styles = StyleSheet.create({
     },
     formContainer: { backgroundColor: 'white', borderRadius: 24, padding: 18, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 10, borderWidth: 1, borderColor: '#f0f0f0' },
     inputGroup: { marginBottom: 15 },
-    fieldLabel: { fontSize: 13, fontWeight: '900', color: '#c62828', marginBottom: 8, marginLeft: 4 },
-    fieldHeading: { fontSize: 16, fontWeight: '900', color: '#333', marginBottom: 8, marginLeft: 4 },
-    inputBox: { height: 54, borderRadius: 14, borderWidth: 1.5, borderColor: '#cbd5e1', flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', overflow: 'hidden' },
-    inputBoxSuccess: { borderColor: Colors.success },
-    inputBoxWithIcon: { height: 54, borderRadius: 14, borderWidth: 1.5, borderColor: '#cbd5e1', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff' },
-    bgLocked: { backgroundColor: '#f8fafc' },
-    inputText: { flex: 1, height: '100%', fontWeight: '900', color: Colors.text, paddingLeft: 12, paddingRight: 0, paddingVertical: 0 },
+    fieldLabel: { fontWeight: '800', color: Colors.text, marginBottom: 10, marginLeft: 2 },
+    fieldHeading: { fontWeight: '800', color: Colors.text, marginBottom: 10, marginLeft: 2 },
+    inputBox: { height: 60, borderRadius: 16, borderWidth: 1.5, borderColor: '#f1f3f5', flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8f9fa', paddingHorizontal: 15, overflow: 'hidden' },
+    inputBoxSuccess: { borderColor: Colors.success, backgroundColor: '#fff', height: 60, borderRadius: 16, borderWidth: 1.5, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15 },
+    inputBoxWithIcon: { height: 60, borderRadius: 16, borderWidth: 1.5, borderColor: '#f1f3f5', paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f8f9fa' },
+    bgLocked: { backgroundColor: '#f8f9fa' },
+    inputText: { flex: 1, height: '100%', fontWeight: '800', color: Colors.text, marginLeft: 12, paddingVertical: 0 },
     italic: { fontStyle: 'italic' },
     textCenter: { textAlign: 'center', paddingRight: 12 },
     textRight: { textAlign: 'right', paddingRight: 0 },

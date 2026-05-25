@@ -8,7 +8,8 @@ import {
     Dimensions,
     Platform,
     Animated,
-    Alert
+    Alert,
+    PanResponder
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -26,8 +27,25 @@ const FarmerDetailScreen = ({ navigation, route }: any) => {
     const [farmers, setFarmers] = useState<Farmer[]>([]);
     const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
     const [isExpanded, setIsExpanded] = useState(false);
+    const isExpandedRef = useRef(false);
 
     const expandAnim = useRef(new Animated.Value(0)).current;
+
+    const panResponder = useRef(
+        PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponder: (evt, gestureState) => {
+                return Math.abs(gestureState.dy) > 10;
+            },
+            onPanResponderRelease: (evt, gestureState) => {
+                if (gestureState.dy < -40 && !isExpandedRef.current) {
+                    toggleExpand();
+                } else if (gestureState.dy > 20 && isExpandedRef.current) {
+                    toggleExpand();
+                }
+            },
+        })
+    ).current;
 
     const loadData = async () => {
         try {
@@ -45,14 +63,17 @@ const FarmerDetailScreen = ({ navigation, route }: any) => {
     );
 
     const toggleExpand = () => {
-        const toValue = isExpanded ? 0 : 1;
+        const toValue = isExpandedRef.current ? 0 : 1;
         Animated.spring(expandAnim, {
             toValue,
             useNativeDriver: false,
             friction: 8,
             tension: 40
         }).start();
-        setIsExpanded(!isExpanded);
+
+        const newState = !isExpandedRef.current;
+        setIsExpanded(newState);
+        isExpandedRef.current = newState;
     };
 
     const handleDeleteFarmer = (farmer: Farmer) => {
@@ -276,7 +297,10 @@ const FarmerDetailScreen = ({ navigation, route }: any) => {
                 )}
             />
 
-            <Animated.View style={[styles.summarySheet, { height: sheetHeight }]}>
+            <Animated.View
+                style={[styles.summarySheet, { height: sheetHeight }]}
+                {...panResponder.panHandlers}
+            >
                 <View style={styles.handleBar} />
 
                 <View style={styles.summaryHeader}>
@@ -399,8 +423,27 @@ const styles = StyleSheet.create({
     footerLeft: { flexDirection: 'row', alignItems: 'center', flexShrink: 0 },
     footerLabel: { fontWeight: '900', color: '#1a1c1e' },
     footerValue: { fontWeight: '900', color: Colors.success, flex: 1, textAlign: 'right', marginLeft: 10 },
-    summarySheet: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'white', borderTopLeftRadius: 30, borderTopRightRadius: 30, paddingHorizontal: 20, paddingBottom: Platform.OS === 'ios' ? 40 : 25, elevation: 30, shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.15, shadowRadius: 20, overflow: 'hidden' },
-    handleBar: { width: 40, height: 4, backgroundColor: '#e2e8f0', borderRadius: 2, alignSelf: 'center', marginTop: 12 },
+    summarySheet: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: 'white',
+        borderTopLeftRadius: 30,
+        borderTopRightRadius: 30,
+        paddingHorizontal: 20,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 25,
+        elevation: 40,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -12 },
+        shadowOpacity: 0.25,
+        shadowRadius: 24,
+        overflow: 'visible',
+        zIndex: 2000,
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(0,0,0,0.05)'
+    },
+    handleBar: { width: 50, height: 6, backgroundColor: '#cbd5e1', borderRadius: 3, alignSelf: 'center', marginTop: 12, marginBottom: 5 },
     summaryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 15 },
     summaryTitleCol: { flex: 1 },
     summaryTitle: { fontWeight: '900', color: '#991b1b', letterSpacing: 1 },

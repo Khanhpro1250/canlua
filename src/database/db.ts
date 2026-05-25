@@ -111,11 +111,19 @@ export const getVessels = async () => {
   return await db.getAllAsync<Vessel>('SELECT * FROM vessels ORDER BY id DESC');
 };
 
+const getCurrentDateStr = () => {
+  const now = new Date();
+  const d = String(now.getDate()).padStart(2, '0');
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const y = now.getFullYear();
+  return `${d}/${m}/${y}`;
+};
+
 export const addVessel = async (name: string, phone: string) => {
   const db = await SQLite.openDatabaseAsync(dbName);
   const result = await db.runAsync(
     'INSERT INTO vessels (name, phone, weight, count, dateStr) VALUES (?, ?, ?, ?, ?)',
-    [name, phone, 0, 0, '23/05']
+    [name, phone, 0, 0, getCurrentDateStr()]
   );
   return result.lastInsertRowId;
 };

@@ -45,6 +45,9 @@ const AddFarmerScreen = ({ navigation, route }: any) => {
     try {
       const numericPrice = parseInt(price.replace(/[^0-9]/g, '') || '0');
 
+      const now = new Date();
+      const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+
       await addFarmer({
         vesselId,
         name: name,
@@ -58,7 +61,8 @@ const AddFarmerScreen = ({ navigation, route }: any) => {
         tareMode: isTareByTime ? 1 : 0,
         bagsPerKg: bagsPerKg,
         kgPerBag: kgPerBag || 0,
-        dateStr: '23/05'
+        paidInFull: false,
+        dateStr: dateStr
       });
 
       navigation.goBack();

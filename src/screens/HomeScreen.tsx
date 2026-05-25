@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,8 @@ import {
   Dimensions,
   StatusBar,
   FlatList,
-  Alert
+  Alert,
+  TextInput
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -50,7 +51,7 @@ const VesselItem = ({ item, index, totalItems, activeMenuId, setActiveMenuId, ha
               <Text style={[styles.itemTitle, { fontSize: sizes.title }]} numberOfLines={1}>{item.name.toUpperCase()}</Text>
               <View style={styles.dateRow}>
                 <Feather name="clock" size={12} color={Colors.textSecondary} />
-                <Text style={[styles.dateText, { fontSize: sizes.subtitle }]}> Ngày tạo: {item.dateStr}/2026</Text>
+                <Text style={[styles.dateText, { fontSize: sizes.subtitle }]}> Ngày tạo: {item.dateStr.includes('/') && item.dateStr.split('/').length === 2 ? `${item.dateStr}/${new Date().getFullYear()}` : item.dateStr}</Text>
               </View>
             </View>
           </View>
@@ -112,6 +113,7 @@ const HomeScreen = ({ navigation }: any) => {
   const [vessels, setVessels] = useState<Vessel[]>([]);
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
   const [editingVessel, setEditingVessel] = useState<Vessel | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -131,6 +133,53 @@ const HomeScreen = ({ navigation }: any) => {
       loadData();
     }, [])
   );
+
+  const filteredVessels = useMemo(() => {
+    if (!searchQuery.trim()) return vessels;
+    const query = searchQuery.toLowerCase().trim();
+    return vessels.filter(v => {
+      const nameMatch = v.name.toLowerCase().includes(query);
+      const phoneMatch = v.phone && v.phone.includes(query);
+
+      // Logic: Nếu data cũ chỉ có "23/05", ta tự gán thêm "/2024" để Search tìm được năm
+      let dateToSearch = v.dateStr;
+      if (dateToSearch.includes('/') && dateToSearch.split('/').length === 2) {
+          dateToSearch = `${dateToSearch}/${new Date().getFullYear()}`;
+      }
+      const dateMatch = dateToSearch.includes(query);
+
+      return nameMatch || phoneMatch || dateMatch;
+    });
+  }, [vessels, searchQuery]);
+
+  const groupedVessels = useMemo(() => {
+    const groups: { [key: string]: Vessel[] } = {};
+    filteredVessels.forEach(v => {
+      let date = v.dateStr;
+      // Normalizing date display for older records in groupings
+      if (date.includes('/') && date.split('/').length === 2) {
+          date = `${date}/${new Date().getFullYear()}`;
+      }
+      if (!groups[date]) groups[date] = [];
+      groups[date].push(v);
+    });
+
+    // Sort dates (newest first)
+    return Object.keys(groups).sort((a, b) => {
+      const [dayA, monthA, yearA] = a.split('/').map(Number);
+      const [dayB, monthB, yearB] = b.split('/').map(Number);
+
+      const yrA = yearA || new Date().getFullYear();
+      const yrB = yearB || new Date().getFullYear();
+
+      if (yrA !== yrB) return yrB - yrA;
+      if (monthA !== monthB) return monthB - monthA;
+      return dayB - dayA;
+    }).map(date => ({
+      date,
+      data: groups[date]
+    }));
+  }, [filteredVessels]);
 
   const openSidebar = () => {
     setSidebarVisible(true);
@@ -211,54 +260,90 @@ const HomeScreen = ({ navigation }: any) => {
             <Text style={styles.headerTitle}>Danh sách Ghe/Xe</Text>
             <View style={{ width: 40 }} />
           </View>
+
+          <View style={styles.searchBarContainer}>
+            <View style={styles.searchBar}>
+              <Feather name="search" size={18} color="#94a3b8" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Tìm tên, số ĐT hoặc ngày..."
+                placeholderTextColor="#94a3b8"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                clearButtonMode="while-editing"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Ionicons name="close-circle" size={18} color="#94a3b8" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
         </SafeAreaView>
       </View>
 
-      <View style={styles.dateHeader}>
-        <MaterialCommunityIcons name="calendar-month" size={20} color="#0056b3" />
-        <Text style={[styles.dateHeaderText, { fontSize: sizes.title }]}>HÔM NAY: 23/5/2026</Text>
-      </View>
-
-      {vessels.length === 0 ? (
+      {groupedVessels.length === 0 ? (
         <View style={styles.emptyStateContainer}>
           <View style={styles.guideBox}>
-            <Text style={styles.guideTextTitle}>CHƯA CÓ DỮ LIỆU</Text>
-            <View style={styles.guideStep}>
-              <View style={styles.stepNumber}><Text style={styles.stepNumberText}>1</Text></View>
-              <Text style={[styles.guideText, { fontSize: sizes.base }]}>Bấm vào nút <Text style={styles.boldYellow}>[+ THÊM MỚI]</Text> ở góc dưới bên phải màn hình.</Text>
-            </View>
-            <View style={styles.guideStep}>
-              <View style={styles.stepNumber}><Text style={styles.stepNumberText}>2</Text></View>
-              <Text style={[styles.guideText, { fontSize: sizes.base }]}>Nhập tên <Text style={styles.boldBlue}>GHE hoặc XE</Text> và số điện thoại.</Text>
-            </View>
-            <View style={styles.guideStep}>
-              <View style={styles.stepNumber}><Text style={styles.stepNumberText}>3</Text></View>
-              <Text style={[styles.guideText, { fontSize: sizes.base }]}>Bấm <Text style={styles.boldGreen}>[LƯU LẠI]</Text> để bắt đầu cân lúa.</Text>
-            </View>
+            <Text style={styles.guideTextTitle}>
+              {searchQuery ? "KHÔNG TÌM THẤY" : "CHƯA CÓ DỮ LIỆU"}
+            </Text>
+            {searchQuery ? (
+              <Text style={[styles.guideText, { textAlign: 'center', marginTop: 10 }]}>
+                Không tìm thấy kết quả cho "<Text style={{fontWeight:'900', color: '#1d71d4'}}>{searchQuery}</Text>".{"\n"}Vui lòng kiểm tra lại tên hoặc ngày.
+              </Text>
+            ) : (
+              <>
+                <View style={styles.guideStep}>
+                  <View style={styles.stepNumber}><Text style={styles.stepNumberText}>1</Text></View>
+                  <Text style={[styles.guideText, { fontSize: sizes.base }]}>Bấm vào nút <Text style={styles.boldYellow}>[+ THÊM MỚI]</Text> ở góc dưới bên phải màn hình.</Text>
+                </View>
+                <View style={styles.guideStep}>
+                  <View style={styles.stepNumber}><Text style={styles.stepNumberText}>2</Text></View>
+                  <Text style={[styles.guideText, { fontSize: sizes.base }]}>Nhập tên <Text style={styles.boldBlue}>GHE hoặc XE</Text> và số điện thoại.</Text>
+                </View>
+                <View style={styles.guideStep}>
+                  <View style={styles.stepNumber}><Text style={styles.stepNumberText}>3</Text></View>
+                  <Text style={[styles.guideText, { fontSize: sizes.base }]}>Bấm <Text style={styles.boldGreen}>[LƯU LẠI]</Text> để bắt đầu cân lúa.</Text>
+                </View>
+              </>
+            )}
           </View>
-          <View style={styles.arrowContainer}>
-             <Text style={styles.arrowText}>Bấm ở đây để thêm</Text>
-             <MaterialCommunityIcons name="arrow-down" size={50} color="#ffb300" />
-          </View>
+          {!searchQuery && (
+            <View style={styles.arrowContainer}>
+              <Text style={styles.arrowText}>Bấm ở đây để thêm</Text>
+              <MaterialCommunityIcons name="arrow-down" size={50} color="#ffb300" />
+            </View>
+          )}
         </View>
       ) : (
         <FlatList
-          data={vessels}
-          renderItem={({ item, index }) => (
-            <VesselItem
-              item={item}
-              index={index}
-              totalItems={vessels.length}
-              activeMenuId={activeMenuId}
-              setActiveMenuId={setActiveMenuId}
-              handleEdit={handleEdit}
-              handleDelete={handleDelete}
-              handleIntoScale={handleIntoScale}
-            />
-          )}
-          keyExtractor={(item) => item.id.toString()}
+          data={groupedVessels}
+          keyExtractor={(item) => item.date}
           contentContainerStyle={styles.listContent}
           onScroll={() => setActiveMenuId(null)}
+          renderItem={({ item: group }) => (
+            <View key={group.date}>
+              <View style={styles.groupHeader}>
+                <MaterialCommunityIcons name="calendar-range" size={20} color="#1d71d4" />
+                <Text style={styles.groupHeaderText}>NGÀY {group.date}</Text>
+                <View style={styles.groupLine} />
+              </View>
+              {group.data.map((vessel, idx) => (
+                <VesselItem
+                  key={vessel.id}
+                  item={vessel}
+                  index={idx}
+                  totalItems={group.data.length}
+                  activeMenuId={activeMenuId}
+                  setActiveMenuId={setActiveMenuId}
+                  handleEdit={handleEdit}
+                  handleDelete={handleDelete}
+                  handleIntoScale={handleIntoScale}
+                />
+              ))}
+            </View>
+          )}
         />
       )}
 
@@ -339,6 +424,12 @@ const styles = StyleSheet.create({
   emptyStateContainer: { flex: 1, paddingHorizontal: 30, justifyContent: 'flex-start', alignItems: 'center', paddingTop: 50 },
   guideBox: { backgroundColor: 'white', padding: 25, borderRadius: 24, width: '100%', elevation: 10, shadowColor: '#004aad', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, borderWidth: 1, borderColor: '#f0f4ff' },
   guideTextTitle: { fontSize: 22, fontWeight: '900', color: '#0056b3', textAlign: 'center', marginBottom: 20, letterSpacing: 1 },
+  searchBarContainer: { paddingHorizontal: 15, paddingBottom: 15, paddingTop: 5 },
+  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 15, paddingHorizontal: 15, height: 45, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  searchInput: { flex: 1, color: 'white', fontWeight: '800', marginLeft: 10, fontSize: 15 },
+  groupHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, marginTop: 25, marginBottom: 15 },
+  groupHeaderText: { color: '#1d71d4', fontWeight: '900', fontSize: 16, marginHorizontal: 10, letterSpacing: 0.5 },
+  groupLine: { flex: 1, height: 2, backgroundColor: 'rgba(29, 113, 212, 0.1)', borderRadius: 1 },
   guideStep: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
   stepNumber: { backgroundColor: '#f0f7ff', width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginRight: 15, borderWidth: 1.5, borderColor: '#0056b3' },
   stepNumberText: { color: '#0056b3', fontWeight: 'bold', fontSize: 16 },
