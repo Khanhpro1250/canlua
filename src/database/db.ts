@@ -25,6 +25,7 @@ export interface Farmer {
   tareMode: number;
   bagsPerKg: number;
   kgPerBag: number;
+  paidInFull: boolean;
   dateStr: string;
 }
 
@@ -55,6 +56,7 @@ export const initDatabase = async () => {
       tareMode INTEGER DEFAULT 0, -- 0: bags per kg, 1: kg per bag
       bagsPerKg INTEGER DEFAULT 8,
       kgPerBag REAL DEFAULT 0,
+      paidInFull INTEGER DEFAULT 0, -- 0: false, 1: true
       dateStr TEXT,
       FOREIGN KEY (vesselId) REFERENCES vessels (id) ON DELETE CASCADE
     );
@@ -82,6 +84,10 @@ export const initDatabase = async () => {
 
   try {
     await db.execAsync("ALTER TABLE farmers ADD COLUMN kgPerBag REAL DEFAULT 0;");
+  } catch (e) { /* Column already exists */ }
+
+  try {
+    await db.execAsync("ALTER TABLE farmers ADD COLUMN paidInFull INTEGER DEFAULT 0;");
   } catch (e) { /* Column already exists */ }
 
   return db;
@@ -141,7 +147,11 @@ export const updateFarmerData = async (id: number, data: Partial<Farmer>) => {
   Object.entries(data).forEach(([key, value]) => {
     if (key !== 'id') {
       sets.push(`${key} = ?`);
-      params.push(value);
+      if (key === 'paidInFull') {
+        params.push(value ? 1 : 0);
+      } else {
+        params.push(value);
+      }
     }
   });
 
