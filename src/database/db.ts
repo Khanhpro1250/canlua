@@ -65,6 +65,7 @@ export const initDatabase = async () => {
       farmerId INTEGER,
       weight REAL NOT NULL,
       recordIndex INTEGER NOT NULL,
+      UNIQUE(farmerId, recordIndex),
       FOREIGN KEY (farmerId) REFERENCES farmers (id) ON DELETE CASCADE
     );
   `);
@@ -89,6 +90,18 @@ export const initDatabase = async () => {
   try {
     await db.execAsync("ALTER TABLE farmers ADD COLUMN paidInFull INTEGER DEFAULT 0;");
   } catch (e) { /* Column already exists */ }
+
+  // Clean up existing duplicates in weighing_records
+  try {
+    await db.execAsync(`
+      DELETE FROM weighing_records
+      WHERE id NOT IN (
+        SELECT MIN(id)
+        FROM weighing_records
+        GROUP BY farmerId, recordIndex
+      );
+    `);
+  } catch (e) { console.error("Data cleanup failed", e); }
 
   return db;
 };
@@ -267,7 +280,7 @@ export const updateFarmerTotals = async (farmerId: number) => {
 
   // 2. Get Farmer info to calculate Net Weight properly for persistence
   const farmer = await db.getFirstAsync<Farmer>(
-    'SELECT impurity, bagsPerKg, vesselId FROM farmers WHERE id = ?',
+    'SELECT impurity, bagsPerKg, kgPerBag, tareMode, vesselId FROM farmers WHERE id = ?',
     [farmerId]
   );
 

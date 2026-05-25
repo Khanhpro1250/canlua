@@ -22,7 +22,7 @@ import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Audio } from 'expo-av';
 import Colors from '../constants/Colors';
-import { Farmer, updateFarmerData, getWeighingRecords, saveWeighingRecord, WeighingRecord } from '../database/db';
+import { Farmer, updateFarmerData, getWeighingRecords, saveWeighingRecord, WeighingRecord, updateFarmerTotals } from '../database/db';
 import { useFontSettings } from '../context/FontSizeContext';
 import { useTareConfig } from '../context/TareConfigContext';
 import { useInputFormat } from '../context/InputFormatContext';
@@ -38,12 +38,12 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
 
     const [farmerName, setFarmerName] = useState(farmer.name);
     const [goodsName, setGoodsName] = useState(farmer.goodsName || '');
-    const [bagCount, setBagCount] = useState(farmer.count.toString());
-    const [impurity, setImpurity] = useState('0');
-    const [price, setPrice] = useState(farmer.price.toString());
+    const [bagCount, setBagCount] = useState(farmer.count?.toString() || '0');
+    const [impurity, setImpurity] = useState(farmer.impurity?.toString() || '0');
+    const [price, setPrice] = useState(farmer.price?.toString() || '0');
     const [deposit, setDeposit] = useState((farmer.deposit || 0).toString());
-    const [paid, setPaid] = useState(farmer.paid.toString());
-    const [paidInFull, setPaidInFull] = useState(false);
+    const [paid, setPaid] = useState(farmer.paid?.toString() || '0');
+    const [paidInFull, setPaidInFull] = useState(!!farmer.paidInFull);
     const [isWarningVisible, setIsWarningVisible] = useState(false);
 
     const [records, setRecords] = useState<Record<number, string>>({});
@@ -177,19 +177,21 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
         }
     };
 
+    const maxDigits = useMemo(() => {
+        if (inputMode === 'above-4-digits') return 4;
+        if (inputMode === 'under-3-digits' || inputMode === 'above-3-digits') return 3;
+        return 2;
+    }, [inputMode]);
+
     const handleWeightInputChange = (index: number, text: string) => {
         const cleaned = text.replace(/[^0-9]/g, '');
-        let maxDigits = 2;
-        if (inputMode === 'under-3-digits' || inputMode === 'above-3-digits') maxDigits = 3;
-        if (inputMode === 'above-4-digits') maxDigits = 4;
-
         const truncated = cleaned.slice(0, maxDigits);
+
         const newRecords = { ...records, [index]: truncated };
         setRecords(newRecords);
 
         if (truncated.length === maxDigits) {
             saveRecordToDb(index, truncated);
-
 
             if ((index + 1) % 5 === 0) {
                 soundRef.current?.replayAsync();
@@ -216,6 +218,8 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
             await saveWeighingRecord(farmer.id, weight, index);
             const dbRecords = await getWeighingRecords(farmer.id);
             setBagCount(dbRecords.length.toString());
+            // Force recalculate and update DB to keep external list in sync
+            await updateFarmerTotals(farmer.id);
         } catch (error) {
             console.error('Error saving record:', error);
         }
@@ -236,6 +240,8 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
                 };
                 if (farmerName.trim()) dataToUpdate.name = farmerName.trim();
                 await updateFarmerData(farmer.id, dataToUpdate);
+                // Trigger total recalculation to sync the NET weight in DB
+                await updateFarmerTotals(farmer.id);
             } catch (error) {
                 console.error('Error auto-saving farmer data:', error);
             }
@@ -314,6 +320,7 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
                         keyboardType="number-pad"
                         selectTextOnFocus
                         onFocus={() => setActiveCellIndex(index)}
+                        maxLength={maxDigits}
                     />
                 ) : (
                     <Text style={[styles.cellText, { fontSize: sizes.base + 2, fontWeight: '900' }]}>{value || '-'}</Text>
