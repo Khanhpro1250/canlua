@@ -14,10 +14,13 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   Alert,
-  Modal
+  Modal,
+  Animated
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
 import Colors from '../constants/Colors';
 import { Farmer, updateFarmerData, getWeighingRecords, saveWeighingRecord, WeighingRecord } from '../database/db';
 import { useFontSettings } from '../context/FontSizeContext';
@@ -42,6 +45,7 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
   const [deposit, setDeposit] = useState((farmer.deposit || 0).toString());
   const [paid, setPaid] = useState(farmer.paid.toString());
   const [paidInFull, setPaidInFull] = useState(false);
+  const [isWarningVisible, setIsWarningVisible] = useState(false);
 
   // Weighing Grid States
   const [records, setRecords] = useState<Record<number, string>>({}); // Use string for editing
@@ -57,7 +61,53 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
   const [isTareModalVisible, setIsTareModalVisible] = useState(false);
   const [tempTareValue, setTempTareValue] = useState(sessionBagsPerKg.toString());
 
+  // Guide Notification State
+  const [showGuide, setShowGuide] = useState(true);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
   const inputRefs = useRef<Record<number, TextInput | null>>({});
+  const soundRef = useRef<Audio.Sound | null>(null);
+
+  // Load sound on mount
+  useEffect(() => {
+    const loadSound = async () => {
+      try {
+        // Required for iOS to play sound even in silent mode
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          allowsRecordingIOS: false,
+          staysActiveInBackground: false,
+          interruptionModeIOS: 1, // InterruptionModeIOS.DoNotMix
+          shouldDuckAndroid: true,
+          interruptionModeAndroid: 1, // InterruptionModeAndroid.DoNotMix
+          playThroughEarpieceAndroid: false,
+        });
+
+        const { sound } = await Audio.Sound.createAsync(
+           { uri: 'https://www.soundjay.com/buttons/beep-01a.mp3' }
+        );
+        soundRef.current = sound;
+      } catch (error) {
+        console.log('Could not load beep sound', error);
+      }
+    };
+    loadSound();
+    return () => {
+      soundRef.current?.unloadAsync();
+    };
+  }, []);
+
+  // Auto-hide and fade out guide after 3 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 1000,
+        useNativeDriver: true,
+      }).start(() => setShowGuide(false));
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Load weighing records on mount
   useEffect(() => {
@@ -115,6 +165,11 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
 
   // Toggle "Mở" mode and auto-focus
   const toggleInputMode = () => {
+    if (paidInFull) {
+      setIsWarningVisible(true);
+      return;
+    }
+
     const newActiveState = !isInputActive;
     setIsInputActive(newActiveState);
 
@@ -148,6 +203,13 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
     // If reached max digits, move to next cell
     if (truncated.length === maxDigits) {
       saveRecordToDb(index, truncated);
+
+      // Feedback when finishing a column
+      if ((index + 1) % 5 === 0) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        soundRef.current?.replayAsync();
+      }
+
       const nextIdx = index + 1;
       setActiveCellIndex(nextIdx);
       setTimeout(() => {
@@ -268,7 +330,7 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
 
     return (
       <View key={`${colIdx}-${rowIdx}`} style={[styles.gridCell, isActive && styles.activeGridCell]}>
-        {isInputActive && canEdit ? (
+        {isInputActive && canEdit && !paidInFull ? (
           <TextInput
             ref={ref => inputRefs.current[index] = ref}
             style={[styles.gridInput, { fontSize: sizes.base + 2, fontWeight: '900' }]}
@@ -333,7 +395,14 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
             </View>
           </View>
 
-          <TouchableOpacity style={[styles.unlockBtn, isInputActive && styles.unlockBtnActive]} onPress={toggleInputMode}>
+          <TouchableOpacity
+            style={[
+              styles.unlockBtn,
+              isInputActive && styles.unlockBtnActive,
+              paidInFull && !isInputActive && styles.unlockBtnDisabled
+            ]}
+            onPress={toggleInputMode}
+          >
             <Ionicons name={isInputActive ? "lock-open" : "lock-closed"} size={18} color="white" />
             <Text style={styles.unlockBtnText}>{isInputActive ? "ĐÓNG" : "MỞ"}</Text>
           </TouchableOpacity>
@@ -359,13 +428,14 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
             {/* Farmer & Goods */}
             <View style={styles.inputGroup}>
               <Text style={[styles.fieldLabel, { fontSize: sizes.label }]}>Tên nông dân</Text>
-              <View style={styles.inputBox}>
+              <View style={[styles.inputBox, paidInFull && styles.bgLocked]}>
                 <TextInput
                   style={[styles.inputText, { fontSize: sizes.base + 2, color: colors.primaryText }]}
                   value={farmerName}
                   onChangeText={handleFarmerNameChange}
                   onBlur={handleFarmerNameBlur}
                   placeholderTextColor="#94a3b8"
+                  editable={!paidInFull}
                 />
               </View>
             </View>
@@ -378,6 +448,7 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
                   placeholderTextColor="#94a3b8"
                   value={goodsName}
                   onChangeText={setGoodsName}
+                  editable={true}
                 />
               </View>
             </View>
@@ -434,7 +505,7 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
 
             <View style={styles.inputGroup}>
               <Text style={[styles.fieldHeading, { fontSize: sizes.label + 2 }]}>Trừ tạp chất (-)</Text>
-              <View style={styles.inputBox}>
+              <View style={[styles.inputBox, paidInFull && styles.bgLocked]}>
                 <TextInput
                   style={[styles.inputText, styles.textRight, { fontSize: sizes.value, color: colors.primaryText }]}
                   value={impurity.replace('.', ',')} // Display dot as comma for user familiarity in VN
@@ -450,6 +521,7 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
                   }}
                   keyboardType="decimal-pad"
                   selectTextOnFocus
+                  editable={!paidInFull}
                 />
                 <Text style={[styles.unitSuffix, { fontSize: sizes.label + 2 }]}>KG</Text>
               </View>
@@ -474,13 +546,14 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
             {/* Money */}
             <View style={styles.inputGroup}>
               <Text style={[styles.fieldHeading, { fontSize: sizes.label + 2 }]}>Đơn giá thỏa thuận</Text>
-              <View style={styles.inputBox}>
+              <View style={[styles.inputBox, paidInFull && styles.bgLocked]}>
                 <TextInput
                   style={[styles.inputText, styles.textRight, { fontSize: sizes.value, color: colors.primaryText }]}
                   value={formatCurrency(price)}
                   onChangeText={(t) => setPrice(cleanNumericInput(t))}
                   keyboardType="number-pad"
                   selectTextOnFocus
+                  editable={!paidInFull}
                 />
                 <Text style={[styles.unitSuffixRed, { fontSize: sizes.label + 2 }]}>Vnđ</Text>
               </View>
@@ -500,13 +573,14 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
 
             <View style={styles.inputGroup}>
               <Text style={[styles.fieldHeading, { fontSize: sizes.label + 2 }]}>Tiền đặt cọc (-)</Text>
-              <View style={styles.inputBox}>
+              <View style={[styles.inputBox, paidInFull && styles.bgLocked]}>
                 <TextInput
                   style={[styles.inputText, styles.textRight, { fontSize: sizes.value, color: colors.primaryText }]}
                   value={formatCurrency(deposit)}
                   onChangeText={(t) => setDeposit(cleanNumericInput(t))}
                   keyboardType="number-pad"
                   selectTextOnFocus
+                  editable={!paidInFull}
                 />
                 <Text style={[styles.unitSuffixRed, { fontSize: sizes.label + 2 }]}>Vnđ</Text>
               </View>
@@ -514,13 +588,14 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
 
             <View style={styles.inputGroup}>
               <Text style={[styles.fieldHeading, { fontSize: sizes.label + 2 }]}>Tiền đã trả (-)</Text>
-              <View style={styles.inputBox}>
+              <View style={[styles.inputBox, paidInFull && styles.bgLocked]}>
                 <TextInput
                   style={[styles.inputText, styles.textRight, { fontSize: sizes.value, color: colors.primaryText }]}
                   value={formatCurrency(paid)}
                   onChangeText={(t) => setPaid(cleanNumericInput(t))}
                   keyboardType="number-pad"
                   selectTextOnFocus
+                  editable={!paidInFull}
                 />
                 <Text style={[styles.unitSuffixRed, { fontSize: sizes.label + 2 }]}>Vnđ</Text>
               </View>
@@ -586,6 +661,14 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
         </ScrollView>
       </KeyboardAvoidingView>
 
+      {/* Floating Guide Notification at the bottom */}
+      {showGuide && (
+        <Animated.View style={[styles.guideToastBottom, { opacity: fadeAnim }]}>
+          <Ionicons name="information-circle" size={20} color="white" />
+          <Text style={styles.guideToastTextBottom}>Bấm Nút "Mở" trên góc phải để nhập mã cân</Text>
+        </Animated.View>
+      )}
+
       {/* Modal for Tare Edit */}
       <Modal
         visible={isTareModalVisible}
@@ -646,6 +729,46 @@ const WeighingSessionScreen = ({ navigation, route }: any) => {
           </TouchableOpacity>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Warning Modal - When paidInFull is true and user tries to unlock */}
+      <Modal
+        visible={isWarningVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsWarningVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setIsWarningVisible(false)}
+        >
+          <TouchableWithoutFeedback>
+            <View style={styles.modernTareCard}>
+              <View style={styles.modalHeaderHeader}>
+                <Text style={styles.modalTitleText}>THÔNG BÁO</Text>
+                <TouchableOpacity onPress={() => setIsWarningVisible(false)} style={styles.modalCloseBtn}>
+                  <Ionicons name="close" size={24} color={Colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalBody}>
+                <View style={styles.warningContainer}>
+                  <Ionicons name="alert-circle" size={48} color={Colors.danger} />
+                  <Text style={styles.warningText}>
+                    Hãy thay đổi trạng thái thành chưa trả đủ tiền để tiếp tục cân.
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.modalFooterActions}>
+                <TouchableOpacity style={styles.confirmActionBtn} onPress={() => setIsWarningVisible(false)}>
+                  <Text style={styles.confirmActionText}>THOÁT</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </TouchableWithoutFeedback>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -662,11 +785,36 @@ const styles = StyleSheet.create({
   statusPillText: { color: 'white', fontSize: 12, fontWeight: '800' },
   unlockBtn: { backgroundColor: '#c62828', flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 15, borderRadius: 20, elevation: 4, borderWidth: 1, borderColor: '#fff' },
   unlockBtnActive: { backgroundColor: Colors.success },
+  unlockBtnDisabled: { backgroundColor: '#cbd5e1', borderColor: '#94a3b8' },
   unlockBtnText: { color: 'white', fontWeight: '900', marginLeft: 4, fontSize: 13 },
   gearBtn: { padding: 10, marginLeft: -10 },
   scrollContent: { padding: 12, paddingBottom: 100 },
   resultsBanner: { backgroundColor: '#c62828', paddingVertical: 12, alignItems: 'center', borderRadius: 15, marginBottom: 15, elevation: 5 },
   resultsBannerText: { color: 'white', fontSize: 20, fontWeight: '900', letterSpacing: 2 },
+  guideToastBottom: {
+    position: 'absolute',
+    bottom: 40,
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    backgroundColor: 'rgba(15, 23, 42, 0.9)', // Dark Navy
+    padding: 15,
+    borderRadius: 15,
+    alignItems: 'center',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    zIndex: 1000
+  },
+  guideToastTextBottom: {
+    flex: 1,
+    color: 'white',
+    fontWeight: '800',
+    fontSize: 14,
+    marginLeft: 12
+  },
   formContainer: { backgroundColor: 'white', borderRadius: 24, padding: 18, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 10, borderWidth: 1, borderColor: '#f0f0f0' },
   inputGroup: { marginBottom: 15 },
   fieldLabel: { fontSize: 13, fontWeight: '900', color: '#c62828', marginBottom: 8, marginLeft: 4 },
@@ -736,6 +884,8 @@ const styles = StyleSheet.create({
   cancelModalBtnText: { fontSize: 15, fontWeight: '800', color: '#64748b' },
   confirmActionBtn: { flex: 2, backgroundColor: Colors.primary, height: 50, borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   confirmActionText: { fontSize: 15, fontWeight: '900', color: 'white' },
+  warningContainer: { alignItems: 'center', paddingVertical: 10 },
+  warningText: { fontSize: 16, fontWeight: '700', color: '#333', textAlign: 'center', marginTop: 15, lineHeight: 24 },
 });
 
 export default WeighingSessionScreen;
